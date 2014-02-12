@@ -1,4 +1,4 @@
-/* config.h.in.  Generated from configure.in by autoheader.  */
+/* config.h.in.  Generated from configure.ac by autoheader.  */
 #undef SIZEOF_LONG
 #undef SIZEOF_VOID_P
 
@@ -90,10 +90,6 @@
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
 
-/* Define if your native architecture defines libdir to be $prefix/lib64
-   instead of $prefix/lib. */
-#undef PREFER_LIB64
-
 /* If using the C implementation of alloca, define if you know the
    direction of stack growth for your system; otherwise it will be
    automatically deduced at runtime.
@@ -105,8 +101,8 @@
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
 
-/* We are using an installed GLib */
-#undef USE_INSTALLED_GLIB
-
 /* Version number of package */
 #undef VERSION
+
+/* Define to `unsigned int' if <sys/types.h> does not define. */
+#undef size_t

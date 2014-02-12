@@ -1,12 +1,13 @@
 
 AC_INIT(pkg-config.1)
 
-AM_INIT_AUTOMAKE(pkg-config, 0.25)
-AM_MAINTAINER_MODE
+AM_INIT_AUTOMAKE(pkg-config, 0.26)
 
 AM_CONFIG_HEADER(config.h)
 
 AM_PROG_LIBTOOL
+dnl when using libtool 2.x create libtool early, because it's used in configure
+m4_ifdef([LT_OUTPUT], [LT_OUTPUT])
 
 AC_PROG_CC
 
@@ -31,6 +32,31 @@ fi
 ])
 
 PKG_CONFIG_FIND_PC_PATH
+
+AC_MSG_CHECKING([for --with-system-include-path])
+AC_ARG_WITH(system_include_path,
+ [  --with-system-include-path    Avoid -I flags that add the given directories ],
+ [ system_include_path="$withval" ],
+ [ system_include_path="/usr/include" ])
+ AC_MSG_RESULT([$system_include_path])
+ AC_SUBST([system_include_path])
+
+AC_MSG_CHECKING([for --with-system-library-path])
+AC_ARG_WITH(system_library_path,
+ [  --with-system-library-path    Avoid -L flags that add the given directories ],
+ [ system_library_path="$withval" ],
+ [
+case "$libdir" in
+*lib64)
+  system_library_path="/usr/lib64:/usr/lib"
+  ;;
+*)
+  system_library_path="/usr/lib"
+  ;;
+esac
+])
+ AC_MSG_RESULT([$system_library_path])
+ AC_SUBST([system_library_path])
 
 #
 # Code taken from gtk+-2.0's configure.in.
@@ -80,7 +106,7 @@ AC_DEFINE_UNQUOTED(ENABLE_INDIRECT_DEPS, `test $use_indirect_deps = no; echo $?`
 AC_SUBST(use_indirect_deps)
 
 AC_MSG_CHECKING([for Win32])
-case "$host" in
+case "$build" in
   *-*-mingw*)
     native_win32=yes
   ;;
@@ -89,51 +115,19 @@ case "$host" in
   ;;
 esac
 AC_MSG_RESULT([$native_win32])
+AM_CONDITIONAL(NATIVE_WIN32, [test "x$native_win32" = xyes])
 
-case "$libdir" in
-*lib64) AC_DEFINE(PREFER_LIB64,1,[Define if your native architecture defines libdir to be $prefix/lib64 instead of $prefix/lib.]) ;;
-*) : ;;
-esac
-
-if test x$native_win32 = xyes; then
-  # On Win32, use the normal installed GLib.  Yes, this is a circular
-  # dependency. But then, only experienced hackers that presumably can
-  # work around that will be building pkg-config and GLib on Win32
-  # anyway (especially using the auto*/configure/libtool
-  # mechanism). Others use prebuilt versions.
-  #
-  # These are correct for GLib 2.x
-  GLIB_CFLAGS="-I$includedir/glib-2.0 -I$libdir/glib-2.0/include"
-  GLIB_LIBS="-L$libdir -lglib-2.0 -liconv -lintl"
-  use_installed_glib=yes
-else
-  use_installed_glib=no
-  AC_ARG_WITH([installed-glib],
-    [  --with-installed-glib   Use installed Glib-2.x], [
-    if test x$withval = xyes; then
-      # Not on Win32, but the user requested to use the installed Glib-2.x,
-      # therefore we may assume that (some older version of) pkg-config can
-      # be found in the users PATH (otherwise we simply ignore the request).
-      AC_CHECK_PROGS([PKG_CONFIG], [pkg-config], [])
-      if test -n $PKG_CONFIG && $PKG_CONFIG --exists glib-2.0; then
-	GLIB_CFLAGS=`$PKG_CONFIG --cflags glib-2.0`
-	GLIB_LIBS=`$PKG_CONFIG --libs glib-2.0`
-	use_installed_glib=yes
-      fi
-    fi
-  ])
-fi # !use_installed_glib
-
-AM_CONDITIONAL(USE_INSTALLED_GLIB, test x$use_installed_glib = xyes)
-
-if test x$use_installed_glib = xyes; then
-  AC_DEFINE(USE_INSTALLED_GLIB, 1, [We are using an installed GLib])
-  AC_SUBST(GLIB_LIBS)
-  AC_SUBST(GLIB_CFLAGS)
-
-else
-  AC_CONFIG_SUBDIRS(glib-1.2.10)
-fi # !native_win32
+if test "x$GLIB_CFLAGS" = "x" && test "x$GLIB_LIBS" = "x"; then
+   AC_CHECK_PROGS([PKG_CONFIG], [pkg-config], [])
+   if test -n $PKG_CONFIG && $PKG_CONFIG --exists glib-2.0; then
+      GLIB_CFLAGS=`$PKG_CONFIG --cflags glib-2.0`
+      GLIB_LIBS=`$PKG_CONFIG --libs glib-2.0`
+   else
+      AC_MSG_ERROR([pkg-config and glib-2.0 not found, please set GLIB_CFLAGS and GLIB_LIBS to the correct values])]
+   fi
+fi
+AC_SUBST(GLIB_LIBS)
+AC_SUBST(GLIB_CFLAGS)
 
 AC_ARG_WITH([installed-popt],
   [AS_HELP_STRING([--with-installed-popt], [use installed popt library])],

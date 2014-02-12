@@ -203,13 +203,17 @@ scan_dir (const char *dirname)
               filename[dirnamelen] = G_DIR_SEPARATOR;
               strcpy (filename + dirnamelen + 1, dent->d_name);
               
-              g_hash_table_insert (locations, pkgname, filename);
-              g_hash_table_insert (path_positions, pkgname,
-                                   GINT_TO_POINTER (scanned_dir_count));
-              
-              debug_spew ("Will find package '%s' in file '%s'\n",
-                          pkgname, filename);
-            }
+	      if (g_file_test(filename, G_FILE_TEST_IS_REGULAR) == TRUE) {
+		  g_hash_table_insert (locations, pkgname, filename);
+		  g_hash_table_insert (path_positions, pkgname,
+				       GINT_TO_POINTER (scanned_dir_count));
+		  debug_spew ("Will find package '%s' in file '%s'\n",
+			      pkgname, filename);
+	      } else {
+		  debug_spew ("Ignoring '%s' while looking for '%s'; not a "
+			      "regular file.\n", pkgname, filename);
+	      }
+	    }
         }
       else
         {
@@ -263,23 +267,8 @@ package_init ()
     }
 }
 
-static gboolean
-file_readable (const char *path)
-{
-  FILE *f = fopen (path, "r");
-
-  if (f != NULL)
-    {
-      fclose (f);
-      return TRUE;
-    }
-  else
-    return FALSE;
-}
-
-
 static Package *
-internal_get_package (const char *name, gboolean warn, gboolean check_compat)
+internal_get_package (const char *name, gboolean warn)
 {
   Package *pkg = NULL;
   const char *location;
@@ -307,7 +296,7 @@ internal_get_package (const char *name, gboolean warn, gboolean check_compat)
 
           un = g_strconcat (name, "-uninstalled", NULL);
 
-          pkg = internal_get_package (un, FALSE, FALSE);
+          pkg = internal_get_package (un, FALSE);
 
           g_free (un);
           
@@ -321,19 +310,6 @@ internal_get_package (const char *name, gboolean warn, gboolean check_compat)
       location = g_hash_table_lookup (locations, name);
     }
   
-  if (location == NULL && check_compat)
-    {
-      pkg = get_compat_package (name);
-
-      if (pkg)
-        {
-          debug_spew ("Returning values for '%s' from a legacy -config script\n",
-                      name);
-          
-          return pkg;
-        }
-    }
-      
   if (location == NULL)
     {
       if (warn)
@@ -394,13 +370,13 @@ internal_get_package (const char *name, gboolean warn, gboolean check_compat)
 Package *
 get_package (const char *name)
 {
-  return internal_get_package (name, TRUE, TRUE);
+  return internal_get_package (name, TRUE);
 }
 
 Package *
 get_package_quiet (const char *name)
 {
-  return internal_get_package (name, FALSE, TRUE);
+  return internal_get_package (name, FALSE);
 }
 
 static GSList*
@@ -584,22 +560,6 @@ spew_package_list (const char *name,
   debug_spew ("\n");
 }
 
-static void
-spew_string_list (const char *name,
-                  GSList     *list)
-{
-  GSList *tmp;
-
-  debug_spew (" %s: ", name);
-  
-  tmp = list;
-  while (tmp != NULL)
-    {
-      debug_spew (" %s ", tmp->data);
-      tmp = tmp->next;
-    }
-  debug_spew ("\n");
-}
 
 static GSList*
 packages_sort_by_path_position (GSList *list)
@@ -712,24 +672,6 @@ fill_list (GSList *packages, GetListFunc func,
   g_slist_free (expanded);
 }
 
-static gint
-compare_req_version_names (gconstpointer a, gconstpointer b)
-{
-  const RequiredVersion *ver_a = a;
-  const RequiredVersion *ver_b = b;
-
-  return strcmp (ver_a->name, ver_b->name);
-}
-
-static gint
-compare_package_keys (gconstpointer a, gconstpointer b)
-{
-  const Package *pkg_a = a;
-  const Package *pkg_b = b;
-
-  return strcmp (pkg_a->key, pkg_b->key);
-}
-
 static GSList *
 add_env_variable_to_list (GSList *list, const gchar *env)
 {
@@ -757,7 +699,7 @@ verify_package (Package *pkg)
   GSList *conflicts_iter;
   GSList *system_dir_iter = NULL;
   int count;
-  const gchar *c_include_path;
+  const gchar *search_path;
 
   /* Be sure we have the required fields */
 
@@ -869,20 +811,26 @@ verify_package (Package *pkg)
   /* We make a list of system directories that gcc expects so we can remove
    * them.
    */
-#ifndef G_OS_WIN32
-  system_directories = g_slist_append (NULL, g_strdup ("/usr/include"));
-#endif
 
-  c_include_path = g_getenv ("C_INCLUDE_PATH");
-  if (c_include_path != NULL)
+  search_path = g_getenv ("PKG_CONFIG_SYSTEM_INCLUDE_PATH");
+
+  if (search_path == NULL)
     {
-      system_directories = add_env_variable_to_list (system_directories, c_include_path);
+      search_path = PKG_CONFIG_SYSTEM_INCLUDE_PATH;
     }
-  
-  c_include_path = g_getenv ("CPLUS_INCLUDE_PATH");
-  if (c_include_path != NULL)
+
+  system_directories = add_env_variable_to_list (system_directories, search_path);
+
+  search_path = g_getenv ("C_INCLUDE_PATH");
+  if (search_path != NULL)
     {
-      system_directories = add_env_variable_to_list (system_directories, c_include_path);
+      system_directories = add_env_variable_to_list (system_directories, search_path);
+    }
+
+  search_path = g_getenv ("CPLUS_INCLUDE_PATH");
+  if (search_path != NULL)
+    {
+      system_directories = add_env_variable_to_list (system_directories, search_path);
     }
 
   count = 0;
@@ -935,31 +883,52 @@ verify_package (Package *pkg)
   g_slist_foreach (system_directories, (GFunc) g_free, NULL);
   g_slist_free (system_directories);
 
-#ifdef PREFER_LIB64
-#define SYSTEM_LIBDIR "/usr/lib64"
-#else
-#define SYSTEM_LIBDIR "/usr/lib"
-#endif
+  system_directories = NULL;
+
+  search_path = g_getenv ("PKG_CONFIG_SYSTEM_LIBRARY_PATH");
+
+  if (search_path == NULL)
+    {
+      search_path = PKG_CONFIG_SYSTEM_LIBRARY_PATH;
+    }
+
+  system_directories = add_env_variable_to_list (system_directories, search_path);
+
   count = 0;
   iter = pkg->L_libs;
   while (iter != NULL)
     {
-      if (strcmp (iter->data, "-L" SYSTEM_LIBDIR) == 0 ||
-          strcmp (iter->data, "-L " SYSTEM_LIBDIR) == 0)
-        {
-          debug_spew ("Package %s has -L" SYSTEM_LIBDIR " in Libs\n",
-                      pkg->name);
-          if (g_getenv ("PKG_CONFIG_ALLOW_SYSTEM_LIBS") == NULL)
-            {              
-              iter->data = NULL;
-              ++count;
-              debug_spew ("Removing -L" SYSTEM_LIBDIR " from libs for %s\n", pkg->key);
-            }
-        }
+      GSList *system_dir_iter = system_directories;
 
+      while (system_dir_iter != NULL)
+        {
+          gboolean is_system = FALSE;
+          const char *linker_arg = iter->data;
+          const char *system_libpath = system_dir_iter->data;
+
+          if (strncmp (linker_arg, "-L ", 3) == 0 &&
+              strcmp (linker_arg + 3, system_libpath) == 0)
+            is_system = TRUE;
+          else if (strncmp (linker_arg, "-L", 2) == 0 &&
+              strcmp (linker_arg + 2, system_libpath) == 0)
+            is_system = TRUE;
+          if (is_system)
+            {
+              debug_spew ("Package %s has -L %s in Libs\n",
+                          pkg->name, system_libpath);
+              if (g_getenv ("PKG_CONFIG_ALLOW_SYSTEM_LIBS") == NULL)
+                {
+                  iter->data = NULL;
+                  ++count;
+                  debug_spew ("Removing -L %s from libs for %s\n", system_libpath, pkg->key);
+                  break;
+                }
+            }
+          system_dir_iter = system_dir_iter->next;
+        }
       iter = iter->next;
     }
-#undef SYSTEM_LIBDIR
+  g_slist_free (system_directories);
 
   while (count)
     {
@@ -1016,7 +985,6 @@ static char*
 get_multi_merged (GSList *pkgs, GetListFunc func, gboolean in_path_order,
 		  gboolean include_private)
 {
-  GSList *tmp;
   GSList *dups_list = NULL;
   GSList *list;
   char *retval;
@@ -1038,7 +1006,6 @@ static char*
 get_multi_merged_from_back (GSList *pkgs, GetListFunc func,
 			    gboolean in_path_order, gboolean include_private)
 {
-  GSList *tmp;
   GSList *dups_list = NULL;
   GSList *list;
   char *retval;
