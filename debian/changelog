@@ -1,3 +1,21 @@
+pkg-config (0.26-1) unstable; urgency=low
+
+  * New upstream release
+    - Updated usage message.  Closes: #389066
+    - Fixes old bug.  Closes: #475031
+    - Allows PKG_CONFIG_LIBDIR.  Closes: #398901
+    - Man page documents how to get the default search path.  
+      Closes: #576320
+  * Switch to multiarch paths.  Thanks to Steve Langasek for the patch.
+    Closes: #590992
+  * Strip out multiarch library paths.  Closes: #482884
+  * Drop a cross wrapper into /usr/share.  Thanks to Wookey for the
+    implementation.   Closes: #217902
+  * Re-add two missing lines in Changelog which were accidentially
+    removed.
+
+ -- Tollef Fog Heen <tfheen@debian.org>  Sun, 15 May 2011 14:37:09 +0200
+
 pkg-config (0.25-1.1) unstable; urgency=low
 
   * Non-maintainer upload.

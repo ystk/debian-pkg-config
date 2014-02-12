@@ -45,7 +45,7 @@ DIST_COMMON = README $(am__configure_deps) $(dist_doc_DATA) \
 	ChangeLog INSTALL NEWS acconfig.h config.guess config.sub \
 	depcomp install-sh ltmain.sh missing
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/configure.in
+am__aclocal_m4_deps = $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
@@ -61,12 +61,7 @@ am_pkg_config_OBJECTS = pkg.$(OBJEXT) parse.$(OBJEXT) main.$(OBJEXT)
 pkg_config_OBJECTS = $(am_pkg_config_OBJECTS)
 am__DEPENDENCIES_1 =
 @USE_INSTALLED_POPT_TRUE@am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1)
-@USE_INSTALLED_GLIB_FALSE@pkg_config_DEPENDENCIES =  \
-@USE_INSTALLED_GLIB_FALSE@	glib-1.2.10/libglib.la \
-@USE_INSTALLED_GLIB_FALSE@	$(am__DEPENDENCIES_2) \
-@USE_INSTALLED_GLIB_FALSE@	$(am__append_2)
-@USE_INSTALLED_GLIB_TRUE@pkg_config_DEPENDENCIES =  \
-@USE_INSTALLED_GLIB_TRUE@	$(am__DEPENDENCIES_2) $(am__append_2)
+pkg_config_DEPENDENCIES = $(am__DEPENDENCIES_2) $(am__append_2)
 DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -121,7 +116,7 @@ AM_RECURSIVE_TARGETS = $(RECURSIVE_TARGETS:-recursive=) \
 	distdir dist dist-all distcheck
 ETAGS = etags
 CTAGS = ctags
-DIST_SUBDIRS = glib-1.2.10 popt check
+DIST_SUBDIRS = popt . check
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 distdir = $(PACKAGE)-$(VERSION)
 top_distdir = $(distdir)
@@ -174,6 +169,7 @@ CPPFLAGS = @CPPFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
+DLLTOOL = @DLLTOOL@
 DSYMUTIL = @DSYMUTIL@
 DUMPBIN = @DUMPBIN@
 ECHO_C = @ECHO_C@
@@ -200,6 +196,7 @@ LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
 MAINT = @MAINT@
 MAKEINFO = @MAKEINFO@
+MANIFEST_TOOL = @MANIFEST_TOOL@
 MKDIR_P = @MKDIR_P@
 NM = @NM@
 NMEDIT = @NMEDIT@
@@ -228,6 +225,7 @@ abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
 abs_top_srcdir = @abs_top_srcdir@
+ac_ct_AR = @ac_ct_AR@
 ac_ct_CC = @ac_ct_CC@
 ac_ct_DUMPBIN = @ac_ct_DUMPBIN@
 am__include = @am__include@
@@ -260,7 +258,6 @@ libdir = @libdir@
 libexecdir = @libexecdir@
 localedir = @localedir@
 localstatedir = @localstatedir@
-lt_ECHO = @lt_ECHO@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
 oldincludedir = @oldincludedir@
@@ -272,31 +269,37 @@ psdir = @psdir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
-subdirs = @subdirs@
 sysconfdir = @sysconfdir@
+system_include_path = @system_include_path@
+system_library_path = @system_library_path@
 target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 use_indirect_deps = @use_indirect_deps@
-@USE_INSTALLED_GLIB_FALSE@included_glib_includes = -I$(top_srcdir)/glib-1.2.10 -I$(top_builddir)/glib-1.2.10
-@USE_INSTALLED_GLIB_TRUE@included_glib_includes = @GLIB_CFLAGS@
-@USE_INSTALLED_GLIB_FALSE@pkg_config_LDADD = glib-1.2.10/libglib.la \
-@USE_INSTALLED_GLIB_FALSE@	$(am__append_1) $(am__append_2)
-@USE_INSTALLED_GLIB_TRUE@pkg_config_LDADD = @GLIB_LIBS@ \
-@USE_INSTALLED_GLIB_TRUE@	$(am__append_1) $(am__append_2)
-@USE_INSTALLED_GLIB_FALSE@GLIB_SUBDIR = glib-1.2.10
+pkg_config_LDADD = @GLIB_LIBS@ $(am__append_1) $(am__append_2)
 @USE_INSTALLED_POPT_FALSE@popt_includes = -I$(top_srcdir)/popt
 @USE_INSTALLED_POPT_FALSE@POPT_SUBDIR = popt
-SUBDIRS = $(GLIB_SUBDIR) $(POPT_SUBDIR) check
+SUBDIRS = $(GLIB_SUBDIR) $(POPT_SUBDIR) . check
 m4dir = $(datadir)/aclocal
 m4_DATA = pkg.m4
 dist_doc_DATA = pkg-config-guide.html
 man_MANS = pkg-config.1
 EXTRA_DIST = $(m4_DATA) $(man_MANS) README.win32
 AM_CFLAGS = @WARN_CFLAGS@
-INCLUDES = -DPKG_CONFIG_PC_PATH="\"$(pc_path)\"" $(included_glib_includes) \
-	$(popt_includes)
+@NATIVE_WIN32_FALSE@INCLUDES = \
+@NATIVE_WIN32_FALSE@	-DPKG_CONFIG_PC_PATH="\"$(pc_path)\"" \
+@NATIVE_WIN32_FALSE@	-DPKG_CONFIG_SYSTEM_INCLUDE_PATH="\"$(system_include_path)\"" \
+@NATIVE_WIN32_FALSE@	-DPKG_CONFIG_SYSTEM_LIBRARY_PATH="\"$(system_library_path)\"" \
+@NATIVE_WIN32_FALSE@	@GLIB_CFLAGS@ \
+@NATIVE_WIN32_FALSE@	$(popt_includes)
+
+@NATIVE_WIN32_TRUE@INCLUDES = \
+@NATIVE_WIN32_TRUE@	-DPKG_CONFIG_PC_PATH="\"$(subst /,\/,$(pc_path))\"" \
+@NATIVE_WIN32_TRUE@	-DPKG_CONFIG_SYSTEM_INCLUDE_PATH="\"$(subst /,\/,$(system_include_path))\"" \
+@NATIVE_WIN32_TRUE@	-DPKG_CONFIG_SYSTEM_LIBRARY_PATH="\"$(subst /,\/,$(system_library_path))\"" \
+@NATIVE_WIN32_TRUE@	@GLIB_CFLAGS@ \
+@NATIVE_WIN32_TRUE@	$(popt_includes)
 
 pkg_config_SOURCES = \
 	pkg.h \
@@ -305,6 +308,7 @@ pkg_config_SOURCES = \
 	parse.c \
 	main.c
 
+DISTCHECK_CONFIGURE_FLAGS = --with-installed-popt
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
