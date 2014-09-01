@@ -1,3 +1,75 @@
+pkg-config 0.28
+===
+- Fixed a pair of long-standing and intertwined bugs involving unwanted
+  removal of flags. The first is that other Libs flags like -Wl are now
+  kept in context order with -l flags. The second is that aggressive
+  removal of all duplicate arguments has been scaled back so that just
+  consecutive duplicate arguments are removed. One result of this change
+  is that some flags could be repeated in the final output, especially
+  flags from non-pkg-config packages like -lm. Since pkg-config rarely
+  has enough knowledge here about the right thing to do, we throw the
+  duplicate arguments at the compiler/linker and trust it will do the
+  right thing.
+- Fixed an old bug to allow circular Requires. This fix brings along a
+  small behavior change in that pkg-config resolves requires depth
+  first, causing some lower level flags to show up earlier in the output
+  than previously.
+- Cleaned up many corner-case bugs and ambiguous behavior in
+  pkg-config's interface. Thanks to Michał Górny for finding so many of
+  these.
+- New autoconf macro PKG_CHECK_VAR for reading variables from .pc files.
+- Default to suppressing -L/lib and/or -L/lib64 like their /usr
+  counterparts.
+- To help support multiarch scenarios out of the box, $host-pkg-config
+  is now installed unless --disable-host-tool is passed to configure.
+- Added optional gcov usage through the --with-gcov configure option. As
+  a result, many more tests were added to greatly increase the coverage
+  of the code to 86% of executed lines on a Fedora 18 machine.
+- Bugs fixed: 130, 7331, 16101, 17053, 19950, 34504, 48098, 54231,
+  54271, 54379, 54384, 54386, 54388, 54389, 54390, 54391, 54427, 54463,
+  54716, 57078, 58363, 59435.
+
+pkg-config 0.27.1
+===
+
+ - Various fixes for using the internal glib snapshot. It should now be
+   usable pretty much everywhere with the exception that universal
+   builds are not supported on OS X.
+ - Remove usage of gettext from the internal glib to avoid gettext and
+   libintl dependencies.
+ - Update internal glib snapshot to 2.32.4.
+ - Fix check for POSIX shell used in tests to work better.
+ - Handle spaces in autodetected prefix on Windows.
+ - Bugs fixed 3550, 51883, 52031, 53493.
+
+pkg-config 0.27
+===
+
+ - Drop usage of popt for equivalent API in glib2.
+ - Add back an internal snapshot of glib2 to break circular dependency.
+   This can be used by passing --with-internal-glib to configure. On
+   Windows it may still be required to use an installed glib.
+ - Fix --exists to check for Requires and Requires.private. This ensures
+   that all necessary packages are installed prior to using --cflags,
+   --libs, etc.
+ - Various fixes for MinGW which should allow it to be used unpatched on
+   that system.
+ - New autoconf macros PKG_INSTALLDIR and PKG_NOARCH_INSTALLDIR to help
+   determine the .pc file install directory.
+ - Fix handling of --exact/atleast/max-version vs. =/>=/<=.
+ - Fix errors in man page source.
+ - Ensure testing only searches in the check directory.
+ - Bump glib requirement to 2.16 to avoid deprecated
+   g_win32_get_package_installation_subdirectory().
+ - Autotools refresh and update. The required versions now are
+   autoconf-2.62, automake-1.11 and libtool-2.2.
+ - Use g_alloca from glib instead of figuring out alloca ourselves.
+ - Remove search for setresuid & setreuid only needed for internal popt.
+ - Bugs fixed: 833, 2458, 5214, 5326, 5703, 6074, 8653, 9135, 9143,
+   9584, 10652, 11464, 14396, 17053, 23922, 28776, 29011, 29801, 31699,
+   31700, 32622, 34382, 37266, 39646, 41081, 43149, 44843, 45599, 45742,
+   48743
+
 pkg-config 0.26
 ===
 

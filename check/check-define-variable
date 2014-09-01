@@ -1,15 +1,25 @@
 #! /bin/sh
 
-# Make sure we're POSIX
-if [ "$PKG_CONFIG_SHELL_IS_POSIX" != "1" ]; then
-    PKG_CONFIG_SHELL_IS_POSIX=1 PATH=`getconf PATH` exec sh $0 "$@"
-fi
-
 set -e
 
 . ${srcdir}/common
 
-ARGS="--define-variable=includedir=/includedir/ --cflags simple"
 RESULT="-I/includedir/"
+case ${MACHTYPE} in
+*-msys)
+    # Make sure path doesn't get mangled on MSYS
+    run_test --define-variable=includedir=\\/includedir/ --cflags simple
+    ;;
+*)
+    run_test --define-variable=includedir=/includedir/ --cflags simple
+    ;;
+esac
 
-run_test
+# Spaces before/after the variable name and value should be stripped
+RESULT="bar"
+run_test --define-variable='  foo  =  bar ' --variable=foo simple
+
+# Should fail when no value set
+EXPECT_RETURN=1
+RESULT="--define-variable argument does not have a value for the variable"
+run_test --define-variable=foo= --variable=foo simple

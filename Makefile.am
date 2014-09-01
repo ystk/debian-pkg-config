@@ -1,46 +1,68 @@
-pkg_config_LDADD=@GLIB_LIBS@
+ACLOCAL_AMFLAGS = ${ACLOCAL_FLAGS}
 
-if USE_INSTALLED_POPT
-pkg_config_LDADD += $(POPT_LIBS)
-else
-pkg_config_LDADD += popt/libpopt.la
-popt_includes = -I$(top_srcdir)/popt
-POPT_SUBDIR = popt
+if INTERNAL_GLIB
+GLIB_SUBDIR = glib
 endif
 
-SUBDIRS = $(GLIB_SUBDIR) $(POPT_SUBDIR) . check
+# Normally we'd want glib to be part of DIST_SUBDIRS unconditionally,
+# but distclean gets broken unless we always run glib's configure
+SUBDIRS = $(GLIB_SUBDIR) . check
+DIST_SUBDIRS = $(SUBDIRS)
 
-m4dir = $(datadir)/aclocal
-m4_DATA = pkg.m4
-
-dist_doc_DATA = pkg-config-guide.html
-
-man_MANS = pkg-config.1
-EXTRA_DIST = $(m4_DATA) $(man_MANS) README.win32
-
-bin_PROGRAMS = pkg-config
-AM_CFLAGS=@WARN_CFLAGS@
-
+# Escape paths properly on windows
 if NATIVE_WIN32
-INCLUDES= \
+AM_CPPFLAGS = \
 	-DPKG_CONFIG_PC_PATH="\"$(subst /,\/,$(pc_path))\"" \
 	-DPKG_CONFIG_SYSTEM_INCLUDE_PATH="\"$(subst /,\/,$(system_include_path))\"" \
-	-DPKG_CONFIG_SYSTEM_LIBRARY_PATH="\"$(subst /,\/,$(system_library_path))\"" \
-	@GLIB_CFLAGS@ \
-	$(popt_includes)
+	-DPKG_CONFIG_SYSTEM_LIBRARY_PATH="\"$(subst /,\/,$(system_library_path))\""
 else
-INCLUDES= \
+AM_CPPFLAGS = \
 	-DPKG_CONFIG_PC_PATH="\"$(pc_path)\"" \
 	-DPKG_CONFIG_SYSTEM_INCLUDE_PATH="\"$(system_include_path)\"" \
-	-DPKG_CONFIG_SYSTEM_LIBRARY_PATH="\"$(system_library_path)\"" \
-	@GLIB_CFLAGS@ \
-	$(popt_includes)
+	-DPKG_CONFIG_SYSTEM_LIBRARY_PATH="\"$(system_library_path)\""
 endif
 
+AM_CFLAGS = \
+	$(WARN_CFLAGS) \
+	$(GCOV_CFLAGS) \
+	$(GLIB_CFLAGS)
+
+bin_PROGRAMS = pkg-config
+pkg_config_LDADD = $(GLIB_LIBS)
 pkg_config_SOURCES= \
 	pkg.h \
 	pkg.c \
 	parse.h \
 	parse.c \
 	main.c
-DISTCHECK_CONFIGURE_FLAGS = --with-installed-popt
+
+if HOST_TOOL
+host_tool = $(host)-pkg-config$(EXEEXT)
+install-exec-hook:
+	cd $(DESTDIR)$(bindir) && $(LN) pkg-config$(EXEEXT) $(host_tool)
+uninstall-hook:
+	cd $(DESTDIR)$(bindir) && rm -f $(host_tool)
+endif
+
+# Various data files
+m4dir = $(datadir)/aclocal
+dist_m4_DATA = pkg.m4
+dist_doc_DATA = pkg-config-guide.html
+dist_man_MANS = pkg-config.1
+EXTRA_DIST = README.win32
+
+# gcov test coverage
+gcov:
+	-$(MAKE) $(AM_MAKEFLAGS) -k check
+	$(GCOV) $(pkg_config_SOURCES)
+CLEANFILES = *.gcda *.gcno *.gcov
+
+# Since we can't always have glib in DIST_SUBDIRS, we need to make sure
+# glib is configured when we want to run dist. Unfortunately, there's no
+# DIST_CONFIGURE_FLAGS.
+DISTCHECK_CONFIGURE_FLAGS = --with-internal-glib
+if !INTERNAL_GLIB
+dist-hook:
+	@echo "error: --with-internal-glib is required to include glib in dist"
+	@exit 1
+endif
