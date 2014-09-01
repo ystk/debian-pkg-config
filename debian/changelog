@@ -1,3 +1,28 @@
+pkg-config (0.28-1) unstable; urgency=medium
+
+  * New upstream release.  (Closes: #699476, #744031)
+    - Updated man page with fewer errors. (Closes: #661838)
+  * Fix test running with newer automake.
+  * Drop popt stuff from debian/rules, upstream no longer ships popt.
+
+ -- Tollef Fog Heen <tfheen@debian.org>  Wed, 23 Apr 2014 18:16:22 +0200
+
+pkg-config (0.26-1+autoconf) unreleased; urgency=medium
+
+  * Non-maintainer upload.
+  * Update config.{sub,guess} for new arches (with dh-autoreconf) (Closes: #742665)
+  * Add Multiarch metadata (M-A: foreign), so this package can
+    satisfy cross- build-dependencies. The cross-build environment is
+    responsible for providing the $triplet-pkg-config symlink to
+    pkg-config-crosswrapper. (Closes: #726598)
+  * Update crosswrapper script to search multiarch paths, traditional
+    cross-compilation paths, arch-independent paths, and /usr/local counterparts.
+    Thanks to Simon McVittie, Steve Langasek, Vincent Danjean, Wookey
+    (Closes: #642292, #650298, #631275)
+  * Make pkg-config itself cross-buildable. (Closes: #716918)
+
+ -- Wookey <wookey@debian.org>  Mon, 24 Mar 2014 17:58:55 +0000
+
 pkg-config (0.26-1) unstable; urgency=low
 
   * New upstream release

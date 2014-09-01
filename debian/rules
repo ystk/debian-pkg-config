@@ -1,23 +1,36 @@
 #! /usr/bin/make -f
 
 DEB_HOST_MULTIARCH     := $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
+DEB_HOST_GNU_TYPE     := $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
+DEB_BUILD_GNU_TYPE     := $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
 
-SYSTEM_LIBDIRS := $(shell for opt in '' $$($${CC-gcc} -print-multi-lib | sed -n -e's/.*;@/-/p'); do \
-     gcc $$opt -print-search-dirs | sed -n -e's/^libraries: =//p' \
+ifneq ($(DEB_BUILD_GNU_TYPE),$(DEB_HOST_GNU_TYPE))
+   SET_PKG_CONFIG = PKG_CONFIG=$(DEB_HOST_GNU_TYPE)-pkg-config
+   GCC = $(DEB_HOST_GNU_TYPE)-gcc
+else
+   GCC = gcc
+endif
+
+SYSTEM_LIBDIRS := $(shell for opt in '' $$($${CC-$(GCC)} -print-multi-lib | sed -n -e's/.*;@/-/p'); do \
+     $(GCC) $$opt -print-search-dirs | sed -n -e's/^libraries: =//p' \
      | sed -e's/:/\n/g' | xargs -n1 readlink -f | grep -v 'gcc\|/[0-9.]\+$$'; \
     done | sort -u | tr '\n' : | sed 's/:$$//')
 
 %:
-	dh $@
+	dh $@ --with autoreconf
 
 override_dh_auto_configure:
-	./configure --prefix=/usr \
-		--with-installed-popt \
+	$(SET_PKG_CONFIG) ./configure --prefix=/usr \
+		--build=$(DEB_BUILD_GNU_TYPE) \
+		--host=$(DEB_HOST_GNU_TYPE) \
 		--mandir=\$${prefix}/share/man \
 		--infodir=\$${prefix}/share/info --disable-shared \
 		--with-pc-path=/usr/local/lib/$(DEB_HOST_MULTIARCH)/pkgconfig:/usr/local/lib/pkgconfig:/usr/local/share/pkgconfig:/usr/lib/$(DEB_HOST_MULTIARCH)/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig \
 		--with-system-library-path=$(SYSTEM_LIBDIRS)
 
 override_dh_auto_clean:
-	[ ! -f Makefile ] || $(MAKE) distclean DIST_SUBDIRS="popt check"
+	[ ! -f Makefile ] || $(MAKE) distclean DIST_SUBDIRS="check"
 	chmod +x debian/pkg-config-crosswrapper
+
+override_dh_auto_test:
+	dh_auto_test -- TESTS_ENVIRONMENT=PKG_CONFIG=../pkg-config LOG_COMPILER=/bin/bash

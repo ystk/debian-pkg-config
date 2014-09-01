@@ -3,7 +3,6 @@ flags when compiling/linking a lot easier.
 
 Report bugs at http://bugzilla.freedesktop.org/
 
-
 To use pkg-config, do something like the following in your configure.ac
 
     PKG_CHECK_MODULES([GNOME], [gtk > 1.2.8 gnomeui >= 1.2.0])
@@ -31,4 +30,32 @@ for any version of gnomeui.
 
 For more info, there's even a man page, try 'man pkg-config'
 
+Building
+========
+pkg-config depends on glib.  Note that glib build-depends on pkg-config,
+but you can just set the corresponding environment variables (ZLIB_LIBS,
+ZLIB_CFLAGS are the only needed ones when this is written) to build it.
 
+pkg-config also either needs an earlier version of itself to find glib
+or you need to set GLIB_CFLAGS and GLIB_LIBS to the correct values for
+where it's installed in your system.
+
+If this requirement is too cumbersome, a bundled copy of a recent glib
+stable release is included. Pass --with-internal-glib to configure to
+use this copy.
+
+If you're cross-compiling and you need to build the bundled glib, refer
+to the glib documentation for cross-compiling glib. In short, this will
+require setting some autoconf cache variables in cases where glib would
+need to run a program to determine the correct value. See the glib
+documentation:
+
+http://developer.gnome.org/glib/stable/glib-cross-compiling.html
+
+If you need to use the bundled glib on Mac OS X, you'll most likely need
+to build for a single architecture rather than as a universal binary.
+This is because glib (as of version 2.32) does not support building for
+multiple architectures out of the box. The glib2 from MacPorts or
+Homebrew may be available as a universal binary and usable for
+pkg-config as described above. Nothing in pkg-config itself precludes
+being built as a universal binary.
